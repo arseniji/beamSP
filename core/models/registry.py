@@ -9,3 +9,7 @@ def get_model(name):
         raise KeyError(f"Модель '{name}' не зарегистрирована. "
                        f"Доступны: {list(_REGISTRY)}")
     return _REGISTRY[name]()
+
+
+def available_models():
+    return list(_REGISTRY)

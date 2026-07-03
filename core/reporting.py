@@ -1,10 +1,12 @@
 from datetime import datetime
-
-import matplotlib
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
-
 from core.labels import method_label, target_label, Q_UNIT
+
+
+def _pyplot():
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    return plt
 
 def print_report(result):
     for tkey, table in result.metrics.items():
@@ -24,6 +26,7 @@ def print_report(result):
 
 
 def build_comparison_figure(result, tkey, scatter_model=None):
+    plt = _pyplot()
     preds = result.predictions.get(tkey, {})
     metrics_df = result.metrics.get(tkey)
     fig = plt.figure(figsize=(11, 6))
@@ -59,6 +62,7 @@ def build_comparison_figure(result, tkey, scatter_model=None):
     return fig
 
 def export_results(result, out_dir, stamp=None):
+    plt = _pyplot()
     out_dir.mkdir(parents=True, exist_ok=True)
     stamp = stamp or datetime.now().strftime("%Y%m%d_%H%M%S")
     saved = []
