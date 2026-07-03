@@ -5,4 +5,6 @@ venv/
 .idea/
 results/*.png
 results/*.csv
+build/
+dist/
 .DS_Store

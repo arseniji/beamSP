@@ -1,0 +1,46 @@
+name: release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            artifact: dist/beam_demo.exe
+            asset: beam_demo-windows-x64.exe
+          - os: ubuntu-22.04
+            artifact: dist/beam_demo
+            asset: beam_demo-linux-x64
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Установить зависимости
+        run: pip install -r requirements.txt -r requirements-build.txt
+
+      - name: Собрать бинарный файл
+        run: pyinstaller beam_demo.spec
+
+      - name: Переименовать под ОС
+        shell: bash
+        run: mv "${{ matrix.artifact }}" "${{ matrix.asset }}"
+
+      - name: Прикрепить к релизу
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ matrix.asset }}

@@ -1,8 +1,14 @@
+import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+if getattr(sys, "frozen", False):
+    ROOT = Path(sys._MEIPASS)
+    RESULTS_DIR = Path(sys.executable).resolve().parent / "results"
+else:
+    ROOT = Path(__file__).resolve().parent.parent
+    RESULTS_DIR = ROOT / "results"
+
 DATA_PATH = ROOT / "config" / "data.xlsx"
-RESULTS_DIR = ROOT / "results"
 
 SEED = 1337
 FEATURES = ["a_h0", "is_steel", "H", "s", "R", "E"]
