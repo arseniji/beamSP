@@ -29,4 +29,5 @@ SYNTH = {
 }
 ACTIVE_MODELS = [
     "linear",
+    "ridge",
 ]

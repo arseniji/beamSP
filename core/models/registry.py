@@ -1,7 +1,9 @@
-from .linear import LinearModel
+from core.models.baseline.linear import LinearModel
+from core.models.baseline.ridge import RidgeModel
 
 _REGISTRY = {
     LinearModel.name: LinearModel,
+    RidgeModel.name: RidgeModel
 }
 
 def get_model(name):
