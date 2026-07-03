@@ -6,3 +6,4 @@ class RunResult:
     metrics: dict = field(default_factory=dict)
     predictions: dict = field(default_factory=dict)
     formulas: dict = field(default_factory=dict)
+    fold_rmse: dict = field(default_factory=dict)

@@ -1,4 +1,5 @@
 from datetime import datetime
+import numpy as np
 from core.labels import method_label, target_label, Q_UNIT
 
 
@@ -61,6 +62,33 @@ def build_comparison_figure(result, tkey, scatter_model=None):
     fig.tight_layout()
     return fig
 
+def build_fold_rmse_figure(result, tkey):
+    fold = result.fold_rmse.get(tkey, {})
+    if not fold:
+        return None
+    plt = _pyplot()
+    methods = list(fold)
+    profiles = list(next(iter(fold.values())).keys())
+    x = np.arange(len(profiles))
+    n = len(methods)
+    width = 0.8 / max(n, 1)
+
+    fig, ax = plt.subplots(figsize=(max(7, len(profiles) * 1.2), 4.5))
+    for i, name in enumerate(methods):
+        vals = [fold[name].get(p, 0.0) for p in profiles]
+        ax.bar(x + (i - (n - 1) / 2) * width, vals, width,
+               label=method_label(name) or name)
+    ax.set_xticks(x)
+    ax.set_xticklabels(profiles, rotation=20, ha="right", fontsize=8)
+    ax.set_ylabel(f"RMSE профиля, {Q_UNIT}")
+    ax.set_title(f"Ошибка по отложенным профилям / {target_label(tkey)}")
+    if n > 1:
+        ax.legend(fontsize=8)
+    ax.grid(axis="y", alpha=0.25)
+    fig.tight_layout()
+    return fig
+
+
 def export_results(result, out_dir, stamp=None):
     plt = _pyplot()
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -78,4 +106,11 @@ def export_results(result, out_dir, stamp=None):
         fig.savefig(fig_path, dpi=150)
         plt.close(fig)
         saved.append(fig_path.name)
+
+        ff = build_fold_rmse_figure(result, tkey)
+        if ff is not None:
+            ff_path = out_dir / f"folds_{tkey}_{stamp}.png"
+            ff.savefig(ff_path, dpi=150)
+            plt.close(ff)
+            saved.append(ff_path.name)
     return saved

@@ -19,15 +19,27 @@ def _overfit_metrics(model, X, y, real, logo_r2):
     return r2_train, r2_train - logo_r2
 
 
-def _worst_fold_rmse(y, preds, groups, real):
-    worst = 0.0
+def per_fold_rmse(y, preds, groups, real):
+    out = {}
     for g in np.unique(groups):
         mask = real & (groups == g)
         if mask.sum() == 0:
             continue
-        rmse = float(np.sqrt(np.mean((y[mask] - preds[mask]) ** 2)))
-        worst = max(worst, rmse)
-    return worst
+        out[g] = float(np.sqrt(np.mean((y[mask] - preds[mask]) ** 2)))
+    return out
+
+
+def _profile_labels(df, groups, is_synth):
+    labels = {}
+    for g in np.unique(groups):
+        sub = df[(groups == g) & ~is_synth]
+        if len(sub):
+            r = sub.iloc[0]
+            mat = "сталь" if r["is_steel"] else "композит"
+            labels[g] = f"{mat} H={int(r['H'])}"
+        else:
+            labels[g] = f"профиль {g}"
+    return labels
 
 def prepare(df, feature_cols, synth_cfg, seed):
     if synth_cfg.get("enabled"):
@@ -58,12 +70,16 @@ def run(model_names, feature_cols, targets, data_path, synth_cfg, seed=42,
         rows = []
         preds_by_model = {}
         formulas = {}
+        label_map = _profile_labels(df, groups, is_synth)
+        result.fold_rmse[tkey] = {}
         for name in model_names:
             preds = leave_one_group_out(lambda n=name: get_model(n),
                                         X, y, groups, is_synth)
             real = ~is_synth & np.isfinite(preds)
             m = compute_metrics(y[real], preds[real])
-            m["RMSE_worst"] = _worst_fold_rmse(y, preds, groups, real)
+            pf = per_fold_rmse(y, preds, groups, real)
+            m["RMSE_worst"] = max(pf.values()) if pf else 0.0
+            result.fold_rmse[tkey][name] = {label_map[g]: v for g, v in pf.items()}
             model = get_model(name)
             r2_train, overfit = _overfit_metrics(model, X, y, real, m["R2"])
             m["R2_train"] = r2_train
