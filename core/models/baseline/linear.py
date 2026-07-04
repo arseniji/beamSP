@@ -2,7 +2,7 @@ import numpy as np
 from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import make_pipeline
-from .base import BaseModel
+from core.models.base import BaseModel
 
 
 class LinearModel(BaseModel):

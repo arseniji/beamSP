@@ -122,7 +122,7 @@ $Q_\text{дв}$ **не пересчитывается** (обоснование 
 | [synth.py](../core/data/synth.py) | синтез возмущённых образцов.                                                                                                                                                         |
 | **`core/models/`** | модели                                                                                                                                                                               |
 | [base.py](../core/models/base.py) | абстрактный интерфейс `BaseModel` (`fit`/`predict`).                                                                                                                                 |
-| [linear.py](../core/models/linear.py) | линейная регрессия (`StandardScaler` + `LinearRegression`) - базовая линия.                                                                                                          |
+| [linear.py](../core/models/baseline/linear.py) | линейная регрессия (`StandardScaler` + `LinearRegression`) - базовая линия.                                                                                                          |
 | [registry.py](../core/models/registry.py) | реестр моделей: `get_model(name)`, `available_models()`. Новый метод регистрируется здесь и сразу доступен во всех точках входа.                                                     |
 | **`core/evaluation/`** | оценка                                                                                                                                                                               |
 | [validation.py](../core/evaluation/validation.py) | схема Leave-One-Group-Out.                                                                                                                                                           |
@@ -134,7 +134,7 @@ $Q_\text{дв}$ **не пересчитывается** (обоснование 
 | [labels.py](../core/labels.py) | подписи методов и целей для вывода.                                                                                                                                           |
 | **`entrypoint/`** | точки входа                                                                                                                                                                          |
 | [_common.py](../entrypoint/_common.py) | общий CLI-каркас (`argparse`, вызов `run()`, печать/экспорт).                                                                                                                        |
-| [line_regression.py](../entrypoint/line_regression.py) | обёртка запуска базовой линии.                                                                                                                                                       |
+| [line_regression.py](../entrypoint/single/line_regression.py) | обёртка запуска базовой линии.                                                                                                                                                       |
 | [interactive.py](../entrypoint/interactive.py) | интерактивное меню выбора метода и параметров (демонстрация).                                                                                                                        |
 
 ---

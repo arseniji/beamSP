@@ -39,7 +39,7 @@ python -m entrypoint.interactive
 Каждый метод — свой файл-обёртка. Базовая линия:
 
 ```bash
-python entrypoint/line_regression.py
+python entrypoint/{single|group}/line_regression.py
 ```
 
 Флаги (общие для всех обёрток, см. [`_common.py`](_common.py)):
@@ -55,10 +55,10 @@ python entrypoint/line_regression.py
 
 ```bash
 # только СП63, без синтеза
-python entrypoint/line_regression.py --target SP63 --no-synth
+python entrypoint/single/line_regression.py --target SP63 --no-synth
 
 # обе цели, 30 синтетических образцов на профиль, с выгрузкой
-python entrypoint/line_regression.py --samples 30 --export
+python entrypoint/single/line_regression.py --samples 30 --export
 ```
 
 ---

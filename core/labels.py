@@ -9,6 +9,7 @@ TARGET_LABELS = {
 
 MODEL_LABELS = {
     "linear": "Линейная регрессия",
+    "ridge": "Ridge-регрессия"
 }
 
 Q_UNIT = "кН"
