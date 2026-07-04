@@ -1,9 +1,11 @@
 from core.models.baseline.linear import LinearModel
 from core.models.baseline.ridge import RidgeModel
+from core.models.baseline.lasso import LassoModel
 
 _REGISTRY = {
     LinearModel.name: LinearModel,
-    RidgeModel.name: RidgeModel
+    RidgeModel.name: RidgeModel,
+    LassoModel.name: LassoModel,
 }
 
 def get_model(name):
