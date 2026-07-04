@@ -7,7 +7,7 @@ class RidgeModel(BaseModel):
     name = "ridge"
     group = "linear"
 
-    def __init__(self, alpha=1.0):
+    def __init__(self, alpha=100.0):
         self._m = make_pipeline(StandardScaler(), Ridge(alpha=alpha))
 
     def fit(self, X, y):
