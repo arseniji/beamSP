@@ -1,5 +1,6 @@
 from datetime import datetime
 import numpy as np
+from core.formula.latexify import to_mathtext
 from core.labels import method_label, target_label, Q_UNIT
 
 
@@ -12,8 +13,7 @@ def _pyplot():
 def print_report(result):
     for tkey, table in result.metrics.items():
         print(f"\n=== {target_label(tkey)} ===")
-        if table.empty:
-            print("  (нет моделей — только методы вывода формулы)")
+        if table.empty: print("  (нет моделей — только методы вывода формулы)")
         else:
             disp = table.copy()
             disp.index = [method_label(m) for m in disp.index]
@@ -58,14 +58,12 @@ def build_comparison_figure(result, tkey, scatter_model=None):
         ax2.set_yticklabels(labels, fontsize=8)
         ax2.set_xlabel(f"RMSE, {Q_UNIT} (меньше — лучше)")
         ax2.set_title(f"Сравнение методов / {tlabel}", fontsize=10)
-
     fig.tight_layout()
     return fig
 
 def build_fold_rmse_figure(result, tkey):
     fold = result.fold_rmse.get(tkey, {})
-    if not fold:
-        return None
+    if not fold: return None
     plt = _pyplot()
     methods = list(fold)
     profiles = list(next(iter(fold.values())).keys())
@@ -76,14 +74,12 @@ def build_fold_rmse_figure(result, tkey):
     fig, ax = plt.subplots(figsize=(max(7, len(profiles) * 1.2), 4.5))
     for i, name in enumerate(methods):
         vals = [fold[name].get(p, 0.0) for p in profiles]
-        ax.bar(x + (i - (n - 1) / 2) * width, vals, width,
-               label=method_label(name) or name)
+        ax.bar(x + (i - (n - 1) / 2) * width, vals, width, label=method_label(name) or name)
     ax.set_xticks(x)
     ax.set_xticklabels(profiles, rotation=20, ha="right", fontsize=8)
     ax.set_ylabel(f"RMSE профиля, {Q_UNIT}")
     ax.set_title(f"Ошибка по отложенным профилям / {target_label(tkey)}")
-    if n > 1:
-        ax.legend(fontsize=8)
+    if n > 1: ax.legend(fontsize=8)
     ax.grid(axis="y", alpha=0.25)
     fig.tight_layout()
     return fig
@@ -96,8 +92,7 @@ def export_results(result, out_dir, stamp=None):
     saved = []
 
     for tkey, df in result.metrics.items():
-        if df.empty:
-            continue
+        if df.empty: continue
         path = out_dir / f"metrics_{tkey}_{stamp}.csv"
         df.to_csv(path, encoding="utf-8-sig")
         saved.append(path.name)
@@ -113,4 +108,42 @@ def export_results(result, out_dir, stamp=None):
             ff.savefig(ff_path, dpi=150)
             plt.close(ff)
             saved.append(ff_path.name)
+
+    if any(result.formulas.values()):
+        fig = build_formulas_figure(result)
+        fpath = out_dir / f"formulas_{stamp}.png"
+        fig.savefig(fpath, dpi=150, bbox_inches="tight")
+        plt.close(fig)
+        saved.append(fpath.name)
     return saved
+def build_formulas_figure(result):
+    plt = _pyplot()
+    items = [("plain", "Обозначения:  M — материал (1=сталь, 0=композит),  "
+    "(a/h₀) — отн. пролёт среза,  H, s — мм,  R, E — МПа")]
+    for tkey, formulas in result.formulas.items():
+        items.append(("target", target_label(tkey)))
+        for name, expr in formulas.items():
+            items.append(("label", method_label(name)))
+            items.append(("formula", expr))
+
+    line_h = 0.045
+    n = max(len(items), 1)
+    fig = plt.figure(figsize=(11, max(4, n * 0.42)))
+    ax = fig.add_axes([0, 0, 1, 1])
+    ax.axis("off")
+    y = 1.0 - line_h
+    for kind, text in items:
+        if kind == "target":
+            ax.text(0.01, y, text, fontsize=13, fontweight="bold")
+        elif kind == "label":
+            ax.text(0.02, y, text, fontsize=10, style="italic", color="#333")
+        elif kind == "formula":
+            fs = 11 if len(text) < 70 else 9 if len(text) < 130 else 7
+            try:
+                ax.text(0.03, y, to_mathtext(text), fontsize=fs)
+            except Exception:
+                ax.text(0.03, y, text, fontsize=7, family="monospace")
+        else:
+            ax.text(0.02, y, text, fontsize=9, color="#666")
+        y -= line_h
+    return fig

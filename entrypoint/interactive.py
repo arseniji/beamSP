@@ -1,3 +1,4 @@
+import os
 import sys
 from pathlib import Path
 
@@ -9,7 +10,7 @@ from config import settings as cfg
 from core.evaluation.runner import run
 from core.labels import method_label, target_label
 from core.models.registry import available_models
-from core.reporting import print_report, export_results
+from core.reporting import print_report, export_results, build_formulas_figure
 
 
 def _prompt(text, default):
@@ -104,6 +105,19 @@ def _run_once():
         progress=progress,
     )
     print_report(result)
+
+    if any(result.formulas.values()) and _ask_yes_no(
+            "\nПоказать формулы методов картинкой (LaTeX)?", False):
+        fig = build_formulas_figure(result)
+        cfg.RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+        path = cfg.RESULTS_DIR / "formulas.png"
+        fig.savefig(path, dpi=150, bbox_inches="tight")
+        print(f"  формулы сохранены: {path}")
+        if hasattr(os, "startfile"):
+            try:
+                os.startfile(path)
+            except Exception:
+                pass
 
     if do_export:
         saved = export_results(result, cfg.RESULTS_DIR)
