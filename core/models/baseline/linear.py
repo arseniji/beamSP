@@ -1,20 +1,12 @@
-import numpy as np
 from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import make_pipeline
-from core.models.base import BaseModel
+from core.models.baseline.scaled_linear import ScaledLinearModel
 
 
-class LinearModel(BaseModel):
+class LinearModel(ScaledLinearModel):
     name = "linear"
     group = "linear"
 
     def __init__(self):
         self._m = make_pipeline(StandardScaler(), LinearRegression())
-
-    def fit(self, X, y):
-        self._m.fit(X, y)
-        return self
-
-    def predict(self, X):
-        return self._m.predict(X)
