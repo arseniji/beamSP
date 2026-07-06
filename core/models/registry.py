@@ -1,3 +1,4 @@
+from core.models.baseline.elastic_net import ElasticNetModel
 from core.models.baseline.linear import LinearModel
 from core.models.baseline.ridge import RidgeModel
 from core.models.baseline.lasso import LassoModel
@@ -6,6 +7,7 @@ _REGISTRY = {
     LinearModel.name: LinearModel,
     RidgeModel.name: RidgeModel,
     LassoModel.name: LassoModel,
+    ElasticNetModel.name: ElasticNetModel,
 }
 
 def get_model(name):

@@ -31,4 +31,5 @@ ACTIVE_MODELS = [
     "linear",
     "ridge",
     "lasso",
+    "elasticnet",
 ]

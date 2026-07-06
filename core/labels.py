@@ -11,6 +11,7 @@ MODEL_LABELS = {
     "linear": "Линейная регрессия",
     "ridge": "Ridge-регрессия",
     "lasso": "Lasso-регрессия",
+    "elasticnet": "ElasticNet-регрессия",
 }
 
 Q_UNIT = "кН"
