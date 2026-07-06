@@ -1,17 +1,11 @@
 import argparse
-import sys
-from pathlib import Path
-
-_ROOT = Path(__file__).resolve().parent.parent
-if str(_ROOT) not in sys.path:
-    sys.path.insert(0, str(_ROOT))
 
 from config import settings as cfg
 from core.evaluation.runner import run
 from core.reporting import print_report, export_results
 
 
-def run_method(title,model_names=None, formula_names=None, argv=None):
+def run_method(title, model_names=None, argv=None):
 
     p = argparse.ArgumentParser(description=title)
     p.add_argument("--target", choices=list(cfg.TARGETS) + ["both"], default="both")
@@ -38,7 +32,7 @@ def run_method(title,model_names=None, formula_names=None, argv=None):
     result = run(
         model_names=model_names or [], feature_cols=cfg.FEATURES, targets=targets,
         data_path=cfg.DATA_PATH, synth_cfg=synth_cfg, seed=cfg.SEED,
-        formula_names=formula_names or [], progress=progress,
+        progress=progress,
     )
     print_report(result)
 

@@ -23,8 +23,7 @@ def per_fold_rmse(y, preds, groups, real):
     out = {}
     for g in np.unique(groups):
         mask = real & (groups == g)
-        if mask.sum() == 0:
-            continue
+        if mask.sum() == 0: continue
         out[g] = float(np.sqrt(np.mean((y[mask] - preds[mask]) ** 2)))
     return out
 
@@ -43,8 +42,7 @@ def _profile_labels(df, groups, is_synth):
 
 def prepare(df, feature_cols, synth_cfg, seed):
     if synth_cfg.get("enabled"):
-        df = synthesize(df, synth_cfg["samples_per_profile"],
-                        synth_cfg["noise"], feature_cols, seed)
+        df = synthesize(df, synth_cfg["samples_per_profile"], synth_cfg["noise"], feature_cols, seed)
     else:
         df = df.copy().reset_index(drop=True)
         df["is_synth"] = 0
@@ -53,12 +51,10 @@ def prepare(df, feature_cols, synth_cfg, seed):
     return df, groups
 
 
-def run(model_names, feature_cols, targets, data_path, synth_cfg, seed=42,
-        formula_names=None, progress=None):
-    formula_names = formula_names or []
+def run(model_names, feature_cols, targets, data_path, synth_cfg, seed=1337, progress=None):
     df0 = load_dataset(data_path)
     result = RunResult()
-    total = len(targets) * (len(model_names) + len(formula_names))
+    total = len(targets) * len(model_names)
     done = 0
 
     for tkey, tcol in targets.items():
@@ -73,20 +69,17 @@ def run(model_names, feature_cols, targets, data_path, synth_cfg, seed=42,
         label_map = _profile_labels(df, groups, is_synth)
         result.fold_rmse[tkey] = {}
         for name in model_names:
-            preds = leave_one_group_out(lambda n=name: get_model(n),
-                                        X, y, groups, is_synth)
+            preds = leave_one_group_out(lambda n=name: get_model(n).set_seed(seed), X, y, groups, is_synth)
             real = ~is_synth & np.isfinite(preds)
             m = compute_metrics(y[real], preds[real])
             pf = per_fold_rmse(y, preds, groups, real)
             m["RMSE_worst"] = max(pf.values()) if pf else 0.0
             result.fold_rmse[tkey][name] = {label_map[g]: v for g, v in pf.items()}
-            model = get_model(name)
+            model = get_model(name).set_seed(seed)
             r2_train, overfit = _overfit_metrics(model, X, y, real, m["R2"])
             m["R2_train"] = r2_train
             m["overfit"] = overfit
-            if hasattr(model, "formula"):
-                formulas[name] = model.formula(feature_cols)
-
+            if hasattr(model, "formula"): formulas[name] = model.formula(feature_cols)
             m["model"] = name
             rows.append(m)
             preds_by_model[name] = {"y_true": y[real], "y_pred": preds[real]}

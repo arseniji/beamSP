@@ -31,7 +31,9 @@ jobs:
           python-version: "3.12"
 
       - name: Установить зависимости
-        run: pip install -r requirements.txt -r requirements-build.txt
+        run: |
+          pip install -r requirements.txt -r requirements-build.txt
+          pip install -e . --no-deps
 
       - name: Собрать бинарный файл
         run: pyinstaller beam_demo.spec
