@@ -32,4 +32,5 @@ ACTIVE_MODELS = [
     "ridge",
     "lasso",
     "elasticnet",
+    "bio_ga",
 ]

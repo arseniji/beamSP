@@ -1,5 +1,6 @@
 GROUP_LABELS = {
     "linear": "Линейные",
+    "formula": "Степенная формула (биоинспир.)",
 }
 
 TARGET_LABELS = {
@@ -12,6 +13,7 @@ MODEL_LABELS = {
     "ridge": "Ridge-регрессия",
     "lasso": "Lasso-регрессия",
     "elasticnet": "ElasticNet-регрессия",
+    "bio_ga": "Степенная: генетический алгоритм",
 }
 
 Q_UNIT = "кН"
