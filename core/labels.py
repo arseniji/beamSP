@@ -14,12 +14,13 @@ MODEL_LABELS = {
     "lasso": "Lasso-регрессия",
     "elasticnet": "ElasticNet-регрессия",
     "bio_ga": "Степенная: генетический алгоритм",
+    "bio_de": "Степенная: дифференциальная эволюция",
 }
 
 Q_UNIT = "кН"
 
 def method_label(name):
-    return MODEL_LABELS.get(name)
+    return MODEL_LABELS.get(name, name)
 
 
 def target_label(name):

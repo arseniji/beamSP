@@ -50,7 +50,7 @@ $$\ln Q = \ln a + \sum_i p_i \ln x_i,$$
 ## 3. Подбор гиперпараметров
 
 Число поколений и размер популяции подбирались утилитой
-[tools/tune_ga.py](../tools/tune_ga.py). Решающий фактор — **число поколений**: ГА
+[tools/tune_optimizer.py](../tools/tune_optimizer.py) (`--optimizer ga`). Решающий фактор — **число поколений**: ГА
 должен успеть сойтись. При фиксированном `pop = 150`:
 
 | поколений | СП63 $R^2$ | РУК78 $R^2$ |
@@ -175,4 +175,4 @@ $R^2$ на обучении и на LOGO почти совпадают (overfit 
 
 Воспроизведение. Прогон: `python entrypoint/single/genetic_algorithm.py` (обе цели,
 $pop = 150$, $generations = 2000$, `SEED = 1337`). Подбор гиперпараметров:
-`python tools/tune_ga.py --pop 150 --gens 2000 --repeats 3`.
+`python tools/tune_optimizer.py --optimizer ga --grid pop_size=150 generations=2000 --repeats 3`.

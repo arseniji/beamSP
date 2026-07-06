@@ -1,5 +1,3 @@
-from functools import partial
-
 import numpy as np
 
 
@@ -47,7 +45,3 @@ def _mutate(child, sigma, rng, rate):
     mask = rng.random(child.size) < rate
     child[mask] += rng.normal(0.0, 1.0, child.size)[mask] * sigma[mask]
     return child
-
-OPTIMIZERS = {
-    "ga": partial(ga, pop_size=150, generations=2000),
-}
