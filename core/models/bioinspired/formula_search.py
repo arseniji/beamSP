@@ -1,7 +1,7 @@
 import numpy as np
 
 from core.models.base import BaseModel
-from core.models.bioinspired.forms import PowerLawForm
+from core.formula.power_law import PowerLawForm
 from core.models.bioinspired.optimizers import OPTIMIZERS
 
 
