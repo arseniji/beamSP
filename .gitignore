@@ -7,4 +7,5 @@ results/*.png
 results/*.csv
 build/
 dist/
+*.egg-info/
 .DS_Store

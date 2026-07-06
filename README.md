@@ -1,8 +1,14 @@
 # Запуск пайплайна
 
-Все команды выполняются из корня репозитория. Python-окружение — с установленными
-зависимостями (`pip install -r requirements.txt`); в примерах ниже используется
-локальный venv.
+Все команды выполняются из корня репозитория. Разовая настройка окружения:
+
+```bash
+pip install -r requirements.txt   # зависимости
+pip install -e .                  # проект как пакет (импорты config/core/entrypoint)
+```
+
+Editable-установка (`-e .`) заменяет ручную правку `sys.path`: после неё все точки
+входа импортируются напрямую из любого места.
 
 ---
 
@@ -36,10 +42,12 @@ python -m entrypoint.interactive
 
 ## Способ 2. Фиксированный CLI (для скриптов и воспроизводимости)
 
-Каждый метод — свой файл-обёртка. Базовая линия:
+Каждый метод — свой файл-обёртка в `entrypoint/single/`; в `entrypoint/group/` —
+сводные прогоны. Например:
 
 ```bash
-python entrypoint/{single|group}/line_regression.py
+python entrypoint/single/line_regression.py    # один метод
+python entrypoint/group/baseline.py             # все линейные методы сразу
 ```
 
 Флаги (общие для всех обёрток, см. [`_common.py`](_common.py)):

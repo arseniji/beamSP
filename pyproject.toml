@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "beam-sp"
+version = "0.3.0"
+description = "Восстановление вклада двутавра Qдв методами ML и биоинспирированной оптимизации"
+requires-python = ">=3.12"
+dependencies = [
+    "numpy",
+    "pandas",
+    "scikit-learn",
+    "openpyxl",
+    "matplotlib",
+]
+
+# Плоская раскладка: пакеты лежат в корне репозитория.
+[tool.setuptools.packages.find]
+include = ["config*", "core*", "entrypoint*"]
