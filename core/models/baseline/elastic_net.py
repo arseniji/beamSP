@@ -8,5 +8,5 @@ class ElasticNetModel(ScaledLinearModel):
     name = "elasticnet"
     group = "linear"
 
-    def __init__(self, alpha=1.0, l1_ratio=0.5):
+    def __init__(self, alpha=2.0, l1_ratio=0.9):
         self._m = make_pipeline(StandardScaler(), ElasticNet(alpha=alpha, l1_ratio=l1_ratio, max_iter=10000))
