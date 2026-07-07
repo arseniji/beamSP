@@ -15,11 +15,11 @@ jobs:
       matrix:
         include:
           - os: windows-latest
-            artifact: dist/beam_demo.exe
-            asset: beam_demo-windows-x64.exe
+            os_tag: windows-x64
+            ext: ".exe"
           - os: ubuntu-22.04
-            artifact: dist/beam_demo
-            asset: beam_demo-linux-x64
+            os_tag: linux-x64
+            ext: ""
 
     runs-on: ${{ matrix.os }}
 
@@ -32,17 +32,24 @@ jobs:
 
       - name: Установить зависимости
         run: |
-          pip install -r requirements.txt -r requirements-build.txt
+          pip install -r requirements.txt -r requirements-build.txt -r requirements-gui.txt
           pip install -e . --no-deps
 
-      - name: Собрать бинарный файл
+      - name: Собрать CLI (интерактивное меню)
         run: pyinstaller beam_demo.spec
+
+      - name: Собрать GUI (PyQt6)
+        run: pyinstaller beam_gui.spec
 
       - name: Переименовать под ОС
         shell: bash
-        run: mv "${{ matrix.artifact }}" "${{ matrix.asset }}"
+        run: |
+          mv "dist/beam_demo${{ matrix.ext }}" "beam-cli-${{ matrix.os_tag }}${{ matrix.ext }}"
+          mv "dist/beam_gui${{ matrix.ext }}" "beam-gui-${{ matrix.os_tag }}${{ matrix.ext }}"
 
       - name: Прикрепить к релизу
         uses: softprops/action-gh-release@v2
         with:
-          files: ${{ matrix.asset }}
+          files: |
+            beam-cli-${{ matrix.os_tag }}${{ matrix.ext }}
+            beam-gui-${{ matrix.os_tag }}${{ matrix.ext }}

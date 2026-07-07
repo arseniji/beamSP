@@ -13,8 +13,8 @@ dependencies = [
     "scikit-learn",
     "openpyxl",
     "matplotlib",
+    "cma",
 ]
 
-# Плоская раскладка: пакеты лежат в корне репозитория.
 [tool.setuptools.packages.find]
 include = ["config*", "core*", "entrypoint*"]

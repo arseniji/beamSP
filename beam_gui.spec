@@ -1,9 +1,14 @@
+
 from PyInstaller.utils.hooks import collect_submodules
 
-hiddenimports = collect_submodules("sklearn") + collect_submodules("cma")
+hiddenimports = (
+    collect_submodules("sklearn")
+    + collect_submodules("cma")
+    + ["matplotlib.backends.backend_qtagg"]
+)
 
 a = Analysis(
-    ["entrypoint/interactive.py"],
+    ["entrypoint/gui.py"],
     pathex=["."],
     binaries=[],
     datas=[("config/data.xlsx", "config")],
@@ -22,12 +27,12 @@ exe = EXE(
     a.binaries,
     a.datas,
     [],
-    name="beam_demo",
+    name="beam_gui",
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
     upx=True,
-    console=True,
+    console=False,
     disable_windowed_traceback=False,
     argv_emulation=False,
 )
