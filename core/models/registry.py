@@ -4,20 +4,12 @@ from core.models.baseline.ridge import RidgeModel
 from core.models.baseline.lasso import LassoModel
 from core.models.classic_ml.gbr import GBRModel
 from core.models.classic_ml.svr import SVRModel
-from core.models.classic_ml.knn import KNNModel
-from core.models.classic_ml.gpr import GPRModel
 from core.models.bioinspired.formula_search import bio_models
-from core.models.sym_regression.symbolic_regression import SymbolicRegressionModel
-from core.models.sym_regression.baesian_symbolic_regression import BayesianSymbolicRegressionModel
-from core.models.neural.pinn import PINNModel
-from core.models.neural.mlp import MLPModel
 
 _BASELINE = [LinearModel, RidgeModel, LassoModel, ElasticNetModel]
-_CLASSIC = [GBRModel, SVRModel, KNNModel, GPRModel]
-_FORMULA = [SymbolicRegressionModel, BayesianSymbolicRegressionModel]
-_NEURAL = [PINNModel, MLPModel]
+_CLASSIC = [GBRModel, SVRModel]
 
-_REGISTRY = {cls.name: cls for cls in (*_BASELINE, *_CLASSIC, *_FORMULA, *_NEURAL)}
+_REGISTRY = {cls.name: cls for cls in (*_BASELINE, *_CLASSIC)}
 _REGISTRY.update(bio_models())
 
 

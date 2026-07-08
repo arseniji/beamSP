@@ -5,6 +5,7 @@ venv/
 .idea/
 results/*.png
 results/*.csv
+results/*.pkl
 build/
 dist/
 *.egg-info/
