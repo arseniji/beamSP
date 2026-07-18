@@ -4,6 +4,7 @@ from PyInstaller.utils.hooks import collect_submodules
 hiddenimports = (
     collect_submodules("sklearn")
     + collect_submodules("cma")
+    + collect_submodules("gplearn")
     + ["matplotlib.backends.backend_qtagg"]
 )
 
