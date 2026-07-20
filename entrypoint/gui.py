@@ -1,6 +1,9 @@
 import sys
 
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
+from PyQt6.QtWidgets import QComboBox
+import matplotlib.pyplot as plt
+from PyQt6.QtWidgets import QScrollArea
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QGroupBox,
     QCheckBox, QListWidget, QListWidgetItem, QSpinBox, QPushButton, QLabel,
@@ -170,14 +173,20 @@ class MainWindow(QMainWindow):
             layout = QVBoxLayout(tab)
             layout.addWidget(self._metrics_table(table))
             figs = QTabWidget()
-            figs.addTab(self._canvas(reporting.build_comparison_figure(result, tkey)), "Предсказание / RMSE")
+            figs.addTab(self._prediction_tab(result, tkey), "Предсказание / RMSE")
             fold = reporting.build_fold_rmse_figure(result, tkey)
             if fold is not None: figs.addTab(self._canvas(fold), "По профилям")
             layout.addWidget(figs, stretch=1)
             self._results.addTab(tab, target_label(tkey))
 
         if any(result.formulas.values()):
-            self._results.addTab(self._canvas(reporting.build_formulas_figure(result)), "Формулы")
+            fig = reporting.build_formulas_figure(result)
+            canvas = self._canvas(fig)
+            canvas.setMinimumSize(canvas.sizeHint())
+            scroll = QScrollArea()
+            scroll.setWidgetResizable(False)
+            scroll.setWidget(canvas)
+            self._results.addTab(scroll, "Формулы")
 
     def _metrics_table(self, df):
         disp = df.round(3)
@@ -195,6 +204,44 @@ class MainWindow(QMainWindow):
 
     def _canvas(self, fig):
         return FigureCanvasQTAgg(fig)
+
+    def _prediction_tab(self, result, tkey):
+        container = QWidget()
+        v = QVBoxLayout(container)
+
+        metrics_df = result.metrics.get(tkey)
+        model_names = list(metrics_df.index) if metrics_df is not None else []
+        default_model = (metrics_df["RMSE"].idxmin()
+                         if metrics_df is not None and not metrics_df.empty else None)
+
+        combo = QComboBox()
+        for name in model_names:
+            combo.addItem(method_label(name), name)
+        if default_model in model_names:
+            combo.setCurrentIndex(model_names.index(default_model))
+
+        v.addWidget(combo)
+        canvas_holder = QVBoxLayout()
+        v.addLayout(canvas_holder)
+
+        state = {"canvas": None, "fig": None}
+
+        def rebuild(model_name):
+            if state["canvas"] is not None:
+                canvas_holder.removeWidget(state["canvas"])
+                state["canvas"].deleteLater()
+            if state["fig"] is not None:
+                plt.close(state["fig"])
+            fig = reporting.build_comparison_figure(result, tkey, scatter_model=model_name)
+            canvas = self._canvas(fig)
+            canvas_holder.addWidget(canvas)
+            state["canvas"] = canvas
+            state["fig"] = fig
+
+        combo.currentIndexChanged.connect(lambda i: rebuild(combo.itemData(i)))
+        rebuild(default_model)
+
+        return container
 
 
 def main():
