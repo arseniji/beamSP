@@ -10,18 +10,7 @@ permissions:
 
 jobs:
   build:
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: windows-latest
-            os_tag: windows-x64
-            ext: ".exe"
-          - os: ubuntu-22.04
-            os_tag: linux-x64
-            ext: ""
-
-    runs-on: ${{ matrix.os }}
+    runs-on: windows-latest
 
     steps:
       - uses: actions/checkout@v4
@@ -38,11 +27,11 @@ jobs:
       - name: Собрать GUI (PyQt6)
         run: pyinstaller beam_gui.spec
 
-      - name: Переименовать под ОС
-        shell: bash
-        run: mv "dist/beam_gui${{ matrix.ext }}" "beam-gui-${{ matrix.os_tag }}${{ matrix.ext }}"
+      - name: Переименовать
+        shell: pwsh
+        run: Rename-Item dist/beam_gui.exe beam-gui-windows-x64.exe
 
       - name: Прикрепить к релизу
         uses: softprops/action-gh-release@v2
         with:
-          files: beam-gui-${{ matrix.os_tag }}${{ matrix.ext }}
+          files: beam-gui-windows-x64.exe
