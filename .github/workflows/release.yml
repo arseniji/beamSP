@@ -35,21 +35,14 @@ jobs:
           pip install -r requirements.txt -r requirements-build.txt -r requirements-gui.txt
           pip install -e . --no-deps
 
-      - name: Собрать CLI (интерактивное меню)
-        run: pyinstaller beam_demo.spec
-
       - name: Собрать GUI (PyQt6)
         run: pyinstaller beam_gui.spec
 
       - name: Переименовать под ОС
         shell: bash
-        run: |
-          mv "dist/beam_demo${{ matrix.ext }}" "beam-cli-${{ matrix.os_tag }}${{ matrix.ext }}"
-          mv "dist/beam_gui${{ matrix.ext }}" "beam-gui-${{ matrix.os_tag }}${{ matrix.ext }}"
+        run: mv "dist/beam_gui${{ matrix.ext }}" "beam-gui-${{ matrix.os_tag }}${{ matrix.ext }}"
 
       - name: Прикрепить к релизу
         uses: softprops/action-gh-release@v2
         with:
-          files: |
-            beam-cli-${{ matrix.os_tag }}${{ matrix.ext }}
-            beam-gui-${{ matrix.os_tag }}${{ matrix.ext }}
+          files: beam-gui-${{ matrix.os_tag }}${{ matrix.ext }}
