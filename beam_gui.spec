@@ -5,6 +5,7 @@ hiddenimports = (
     collect_submodules("sklearn")
     + collect_submodules("cma")
     + collect_submodules("gplearn")
+    + collect_submodules("torch")
     + ["matplotlib.backends.backend_qtagg"]
 )
 
