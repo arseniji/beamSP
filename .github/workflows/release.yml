@@ -34,4 +34,4 @@ jobs:
       - name: Прикрепить к релизу
         uses: softprops/action-gh-release@v2
         with:
-          files: beam-gui-windows-x64.exe
+          files: dist/beam-gui-windows-x64.exe
