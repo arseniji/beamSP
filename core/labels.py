@@ -1,7 +1,14 @@
 GROUP_LABELS = {
     "linear": "Линейные",
-    "formula": "Степенная формула (биоинспир.)",
+    "kernel": "Ядровые методы (SVR / GPR)",
+    "neighbors": "Метод ближайших соседей",
+    "ensemble": "Ансамбли деревьев",
+    "formula": "Вывод формулы (символьная / биоинспир.)",
+    "neural": "Нейросети",
+    "experimental": "Экспериментальные",
 }
+
+GROUP_ORDER = ["linear", "kernel", "neighbors", "ensemble", "formula", "neural", "experimental"]
 
 TARGET_LABELS = {
     "SP63": "СП 63.13330",
@@ -23,6 +30,9 @@ MODEL_LABELS = {
     "gpr": "Гауссовский процесс (GPR)",
     "symreg": "Символьная регрессия",
     "bayes_symreg": "Байесовская символьная регрессия (ARD)",
+    "pinn": "Физически-информированная нейросеть (PINN)",
+    "mlp": "Многослойный перцептрон (MLP)",
+    "rl_ac": "RL (актор-критик)",
 }
 
 Q_UNIT = "кН"

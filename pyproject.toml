@@ -15,6 +15,7 @@ dependencies = [
     "openpyxl",
     "matplotlib",
     "cma",
+    "torch",
 ]
 
 [tool.setuptools.packages.find]

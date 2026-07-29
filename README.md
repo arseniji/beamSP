@@ -71,23 +71,35 @@ python entrypoint/single/line_regression.py --samples 30 --export
 
 ---
 
-## Способ 3. Собранный бинарь (демо без Python)
-
-Однофайловый исполняемый файл с зашитыми данными и зависимостями — для показа
-на машине, где не развёрнуто окружение. На Windows → `.exe`, на Linux → ELF.
-
-Сборка (нужен `pip install -r requirements-build.txt`):
+## Способ 3. Графический интерфейс (GUI)
 
 ```bash
-pyinstaller beam_demo.spec
+python entrypoint/gui.py
 ```
 
-Результат — `dist/beam_demo.exe` (~90 МБ). Запуск двойным кликом или из консоли;
-интерфейс — то же интерактивное меню (Способ 1). Экспорт пишется в папку
-`results/` рядом с исполняемым файлом.
+---
 
-> Бинарь и папки `build/`, `dist/` не коммитятся (см. `.gitignore`) — собирается
-> локально из спека.
+## Способ 4. Собранный бинарный файл (демо без Python)
+
+Однофайловый исполняемый файл GUI с зашитыми данными и зависимостями — для показа
+на машине, где не развёрнуто окружение. Публикуется автоматически в
+[GitHub Releases](../../releases) при каждом теге `v*`: `beam-gui-windows-x64.exe`
+для Windows, `beam-gui-linux-x64` для Linux. Запуск двойным кликом или из
+консоли — интерфейс тот же, что и в Способе 3.
+
+Собрать локально (нужны `requirements-build.txt` и `requirements-gui.txt`):
+
+```bash
+pip install -r requirements.txt -r requirements-build.txt -r requirements-gui.txt
+pip install -e . --no-deps
+pyinstaller beam_gui.spec
+```
+
+Результат — `dist/beam_gui.exe` (Windows) / `dist/beam_gui` (Linux). Экспорт
+пишется в папку `results/` рядом с исполняемым файлом.
+
+> Бинарный файл и папки `build/`, `dist/` не коммитятся (см. `.gitignore`) — собирается
+> локально из спека или скачивается из релиза.
 
 ---
 

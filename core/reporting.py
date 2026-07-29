@@ -126,8 +126,8 @@ def build_formulas_figure(result):
             items.append(("label", method_label(name)))
             items.append(("formula", expr))
 
-    line_h = 0.045
     n = max(len(items), 1)
+    line_h = 1.0 / (n + 1)
     fig = plt.figure(figsize=(11, max(4, n * 0.42)))
     ax = fig.add_axes([0, 0, 1, 1])
     ax.axis("off")

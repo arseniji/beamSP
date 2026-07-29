@@ -1,18 +1,133 @@
 import sys
 
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
+from PyQt6.QtWidgets import QComboBox
+import matplotlib.pyplot as plt
+from PyQt6.QtWidgets import QScrollArea
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QGroupBox,
-    QCheckBox, QListWidget, QListWidgetItem, QSpinBox, QPushButton, QLabel,
+    QCheckBox, QTreeWidget, QTreeWidgetItem, QSpinBox, QDoubleSpinBox, QPushButton, QLabel,
     QTableWidget, QTableWidgetItem, QTabWidget, QProgressBar, QSplitter,
 )
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 
 from config import settings as cfg
 from core import reporting
+from core import labels as labels_mod
 from core.evaluation.runner import run
-from core.labels import method_label, target_label
-from core.models.registry import available_models
+from core.formula.power_law import PowerLawForm
+from core.labels import GROUP_LABELS, GROUP_ORDER, method_label, target_label
+import core.models.registry as registry
+from core.models.registry import available_models, model_class
+from core.models.bioinspired.formula_search import FormulaSearchModel
+from core.models.bioinspired.optimizers import OPTIMIZERS
+
+
+
+FIXABLE_FEATURES = [
+    ("a_h0", "a/h0 (относительный пролёт среза)", 0.0),
+    ("H", "H — высота двутавра, мм", 1.0),
+    ("s", "s — толщина стенки, мм", 1.0),
+    ("R", "R — предел прочности, МПа", 1.0),
+    ("E", "E — модуль упругости, МПа", 0.0),
+]
+
+BIO_METHOD_NAMES = {f"bio_{opt}" for opt in OPTIMIZERS}
+
+HELP_HTML = """
+<h3>Как пользоваться</h3>
+<ol>
+<li><b>Целевая величина</b> — считать вклад двутавра Q<sub>дв</sub> по СП 63.13330,
+по руководству 1978 г., или сразу по обеим (для сравнения).</li>
+<li><b>Методы</b> — можно выбрать несколько сразу (Ctrl/Shift + клик), тогда
+в результатах они будут показаны рядом для сравнения. Список сгруппирован
+по типу метода.</li>
+<li><b>Фиксация показателей степени</b> — появляется, если среди выбранных
+методов есть биоинспирированные (генетический алгоритм / дифференциальная
+эволюция / рой частиц / CMA-ES). Задайте нужные значения (например
+H = s = R = 1, E = 0), затем отметьте галочкой «+ фикс.» те методы, для
+которых хотите дополнительно прогнать зафиксированную версию — обычная
+(свободная) версия остаётся в прогоне, обе строки можно сравнить в
+результатах.</li>
+<li><b>Синтез образцов</b> — добавляет к 6 исходным профилям искусственные
+образцы с небольшим случайным разбросом входов (Q<sub>дв</sub> при этом не
+пересчитывается) для устойчивости моделей, чувствительных к размеру выборки.
+Можно отключить или изменить число образцов на профиль.</li>
+<li><b>Запустить</b> — прогон по схеме Leave-One-Group-Out (обучение на 5
+профилях, проверка на отложенном 6-м). Результат: таблица «метод × метрики»,
+графики предсказание/RMSE и разбивка по профилям, а для методов, выводящих
+явную формулу — отдельная вкладка «Формулы».</li>
+<li><b>Свой датасет</b> — по умолчанию используется встроенная таблица.
+Чтобы подставить свою, положите файл <code>data.xlsx</code> той же структуры
+столбцов рядом с исполняемым файлом (в той же папке, что и .exe) и
+перезапустите программу — она будет использована вместо встроенной.</li>
+</ol>
+<h3>Метрики</h3>
+<ul>
+<li><b>Qexp/Qpred_mean</b> — среднее отношение эксперимент/предсказание
+(в идеале ≈ 1), <b>CV</b> — коэффициент вариации этого отношения.</li>
+<li><b>MAE / RMSE / R2</b> — стандартные метрики точности, для полноты
+картины.</li>
+<li><b>overfit</b> = R2_train − R2(LOGO) — насколько модель переобучилась
+на исходных 6 профилях по сравнению с проверкой на отложенном профиле.</li>
+</ul>
+"""
+
+
+def _fixed_bio_class(opt_name, fixed_exponents):
+    optimizer = OPTIMIZERS[opt_name]
+
+    class _FixedPowerLaw(FormulaSearchModel):
+        name = f"bio_{opt_name}_fixed"
+
+        def __init__(self, seed=cfg.SEED):
+            super().__init__(optimizer, form=PowerLawForm(fixed_exponents=fixed_exponents), seed=seed)
+
+    return _FixedPowerLaw
+
+
+class CollapsibleSection(QWidget):
+    
+
+    def __init__(self, title, parent=None):
+        super().__init__(parent)
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(0, 0, 0, 0)
+        outer.setSpacing(0)
+
+        self._title = title
+        self._summary = ""
+
+        self._toggle = QPushButton()
+        self._toggle.setCheckable(True)
+        self._toggle.setFlat(True)
+        self._toggle.setStyleSheet("QPushButton { text-align: left; padding: 6px 2px; font-weight: 600; }")
+        outer.addWidget(self._toggle)
+
+        self._body = QWidget()
+        self._body_layout = QVBoxLayout(self._body)
+        self._body_layout.setContentsMargins(4, 2, 4, 8)
+        self._body.setVisible(False)
+        outer.addWidget(self._body)
+
+        self._toggle.toggled.connect(self._body.setVisible)
+        self._toggle.toggled.connect(lambda _checked: self._refresh_text())
+        self._refresh_text()
+
+    def _refresh_text(self):
+        arrow = "▾" if self._toggle.isChecked() else "▸"
+        suffix = f"   [{self._summary}]" if self._summary else ""
+        self._toggle.setText(f"{arrow}  {self._title}{suffix}")
+
+    def set_summary(self, text):
+        self._summary = text
+        self._refresh_text()
+
+    def set_open(self, is_open):
+        self._toggle.setChecked(is_open)
+
+    def layout_body(self):
+        return self._body_layout
 
 
 class RunWorker(QThread):
@@ -45,6 +160,7 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("Вклад двутавра Qдв — ML и биоинспирированная оптимизация")
         self.resize(1220, 760)
         self._worker = None
+        self._last_result = None
         self._build_ui()
 
     def _build_ui(self):
@@ -63,30 +179,101 @@ class MainWindow(QMainWindow):
 
         m_box = QGroupBox("Методы (можно несколько)")
         ml = QVBoxLayout(m_box)
-        self._method_list = QListWidget()
-        self._method_list.setSelectionMode(
-            QListWidget.SelectionMode.MultiSelection)
+        self._method_tree = QTreeWidget()
+        self._method_tree.setHeaderHidden(True)
+        self._method_tree.setIndentation(14)
+
+        by_group = {}
         for name in available_models():
-            item = QListWidgetItem(method_label(name))
-            item.setData(Qt.ItemDataRole.UserRole, name)
-            self._method_list.addItem(item)
-        self._method_list.item(0).setSelected(True)
-        ml.addWidget(self._method_list)
+            by_group.setdefault(model_class(name).group, []).append(name)
+        groups_in_order = GROUP_ORDER + [g for g in by_group if g not in GROUP_ORDER]
+
+        first_item = None
+        first_group_item = None
+        for group in groups_in_order:
+            names = by_group.get(group)
+            if not names:
+                continue
+            group_item = QTreeWidgetItem([f"{GROUP_LABELS.get(group, group)} ({len(names)})"])
+            font = group_item.font(0)
+            font.setBold(True)
+            group_item.setFont(0, font)
+            self._method_tree.addTopLevelItem(group_item)
+            for name in names:
+                item = QTreeWidgetItem([method_label(name)])
+                item.setCheckState(0, Qt.CheckState.Unchecked)
+                
+                
+                
+                item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsUserCheckable)
+                item.setData(0, Qt.ItemDataRole.UserRole, name)
+                group_item.addChild(item)
+                if first_item is None:
+                    first_item = item
+                    first_group_item = group_item
+        if first_item is not None:
+            first_item.setCheckState(0, Qt.CheckState.Checked)
+            first_item.setFlags(first_item.flags() & ~Qt.ItemFlag.ItemIsUserCheckable)
+        if first_group_item is not None:
+            self._method_tree.expandItem(first_group_item)
+        ml.addWidget(self._method_tree)
         col.addWidget(m_box, stretch=1)
 
-        s_box = QGroupBox("Синтез образцов")
-        sl = QVBoxLayout(s_box)
+        self._fix_section = CollapsibleSection("Фиксация показателей степени (для bio_*)")
+        note = QLabel("Значения ниже применяются только к тем bio_*-методам, что отмечены "
+                       "галочкой «+ фикс.» — обычная (свободная) версия при этом остаётся "
+                       "в прогоне, обе строки можно сравнить в результатах.")
+        note.setWordWrap(True)
+        self._fix_section.layout_body().addWidget(note)
+        self._fix_rows = {}
+        for feat_name, label, default_value in FIXABLE_FEATURES:
+            row = QHBoxLayout()
+            cb = QCheckBox(label)
+            spin = QDoubleSpinBox()
+            spin.setRange(-5.0, 5.0)
+            spin.setSingleStep(0.5)
+            spin.setValue(default_value)
+            spin.setEnabled(False)
+            cb.toggled.connect(spin.setEnabled)
+            cb.toggled.connect(self._refresh_fix_summary)
+            spin.valueChanged.connect(self._refresh_fix_summary)
+            row.addWidget(cb)
+            row.addWidget(spin)
+            self._fix_section.layout_body().addLayout(row)
+            self._fix_rows[feat_name] = (cb, spin)
+
+        twin_label = QLabel("Прогнать зафиксированную версию рядом с обычной:")
+        twin_label.setWordWrap(True)
+        self._fix_section.layout_body().addWidget(twin_label)
+        self._fix_twin_container = QWidget()
+        self._fix_twin_layout = QVBoxLayout(self._fix_twin_container)
+        self._fix_twin_layout.setContentsMargins(0, 0, 0, 0)
+        self._fix_section.layout_body().addWidget(self._fix_twin_container)
+        self._fix_twin_checks = {}
+
+        self._fix_section.set_open(True)
+        col.addWidget(self._fix_section)
+
+        self._method_tree.itemChanged.connect(self._update_fix_box_visibility)
+        self._method_tree.itemClicked.connect(self._on_tree_item_clicked)
+        self._update_fix_box_visibility()
+        self._refresh_fix_summary()
+
+        self._synth_section = CollapsibleSection("Синтез образцов")
         self._synth_cb = QCheckBox("Включить синтез")
         self._synth_cb.setChecked(cfg.SYNTH["enabled"])
-        sl.addWidget(self._synth_cb)
-        row = QHBoxLayout()
-        row.addWidget(QLabel("Образцов на профиль:"))
+        self._synth_cb.toggled.connect(self._refresh_synth_summary)
+        self._synth_section.layout_body().addWidget(self._synth_cb)
+        srow = QHBoxLayout()
+        srow.addWidget(QLabel("Образцов на профиль:"))
         self._samples_spin = QSpinBox()
         self._samples_spin.setRange(0, 500)
         self._samples_spin.setValue(cfg.SYNTH["samples_per_profile"])
-        row.addWidget(self._samples_spin)
-        sl.addLayout(row)
-        col.addWidget(s_box)
+        self._samples_spin.valueChanged.connect(self._refresh_synth_summary)
+        srow.addWidget(self._samples_spin)
+        self._synth_section.layout_body().addLayout(srow)
+        col.addWidget(self._synth_section)
+        self._refresh_synth_summary()
 
         self._run_btn = QPushButton("▶  Запустить")
         self._run_btn.clicked.connect(self._on_run)
@@ -94,10 +281,16 @@ class MainWindow(QMainWindow):
         self._progress = QProgressBar()
         col.addWidget(self._progress)
 
+        self._export_btn = QPushButton("💾  Экспорт в results/")
+        self._export_btn.setEnabled(False)
+        self._export_btn.clicked.connect(self._on_export)
+        col.addWidget(self._export_btn)
+
         self._results = QTabWidget()
         placeholder = QLabel("Выберите методы и цели, затем «Запустить».")
         placeholder.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._results.addTab(placeholder, "Результаты")
+        self._results.addTab(self._build_help_tab(), "Помощь")
 
         splitter = QSplitter()
         splitter.addWidget(controls)
@@ -113,11 +306,91 @@ class MainWindow(QMainWindow):
 
     def _selected_methods(self):
         names = []
-        for i in range(self._method_list.count()):
-            item = self._method_list.item(i)
-            if item.isSelected():
-                names.append(item.data(Qt.ItemDataRole.UserRole))
+        root = self._method_tree.invisibleRootItem()
+        for gi in range(root.childCount()):
+            group_item = root.child(gi)
+            for ci in range(group_item.childCount()):
+                item = group_item.child(ci)
+                if item.checkState(0) == Qt.CheckState.Checked:
+                    names.append(item.data(0, Qt.ItemDataRole.UserRole))
         return names
+
+    def _on_tree_item_clicked(self, item, _column):
+        if item.parent() is None:
+            return  
+        state = Qt.CheckState.Unchecked if item.checkState(0) == Qt.CheckState.Checked else Qt.CheckState.Checked
+        item.setCheckState(0, state)
+        
+        
+        item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsUserCheckable)
+
+    def _update_fix_box_visibility(self, *_args):
+        selected_bio = [n for n in self._selected_methods() if n in BIO_METHOD_NAMES]
+        self._fix_section.setVisible(bool(selected_bio))
+        self._rebuild_fix_twin_rows(selected_bio)
+
+    def _rebuild_fix_twin_rows(self, selected_bio):
+        wanted = set(selected_bio)
+        existing = set(self._fix_twin_checks)
+        for name in existing - wanted:
+            cb = self._fix_twin_checks.pop(name)
+            self._fix_twin_layout.removeWidget(cb)
+            cb.deleteLater()
+        for name in wanted - existing:
+            cb = QCheckBox(f"+ фикс.: {method_label(name)}")
+            self._fix_twin_layout.addWidget(cb)
+            self._fix_twin_checks[name] = cb
+
+    def _refresh_fix_summary(self):
+        checked = [(name, spin.value()) for name, (cb, spin) in self._fix_rows.items() if cb.isChecked()]
+        if not checked:
+            summary = "не задано"
+        elif len(checked) <= 2:
+            summary = " · ".join(f"{name}={v:g}" for name, v in checked)
+        else:
+            head = " · ".join(f"{name}={v:g}" for name, v in checked[:2])
+            summary = f"{head} +{len(checked) - 2}"
+        self._fix_section.set_summary(summary)
+
+    def _refresh_synth_summary(self):
+        if self._synth_cb.isChecked():
+            self._synth_section.set_summary(f"вкл · {self._samples_spin.value()}/профиль")
+        else:
+            self._synth_section.set_summary("выкл")
+
+    def _build_help_tab(self):
+        label = QLabel(HELP_HTML)
+        label.setWordWrap(True)
+        label.setAlignment(Qt.AlignmentFlag.AlignTop)
+        label.setTextFormat(Qt.TextFormat.RichText)
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setWidget(label)
+        return scroll
+
+    def _fixed_exponents(self):
+        fixed = {}
+        for feat_name, (cb, spin) in self._fix_rows.items():
+            if cb.isChecked():
+                fixed[cfg.FEATURES.index(feat_name)] = spin.value()
+        return fixed
+
+    def _apply_fixation(self, methods, fixed_exponents):
+        """Не заменяет выбранные bio_*-методы, а добавляет к ним fixed-версию
+        для тех, что отмечены галочкой «+ фикс.» — обычная версия остаётся
+        в прогоне, чтобы сравнить обе строки в результатах."""
+        if not fixed_exponents:
+            return methods
+        extra = []
+        for name, cb in self._fix_twin_checks.items():
+            if not cb.isChecked() or name not in methods:
+                continue
+            opt_name = name[len("bio_"):]
+            fixed_name = f"bio_{opt_name}_fixed"
+            registry._REGISTRY[fixed_name] = _fixed_bio_class(opt_name, fixed_exponents)
+            labels_mod.MODEL_LABELS[fixed_name] = method_label(name) + " (фикс.)"
+            extra.append(fixed_name)
+        return methods + extra
 
     def _on_run(self):
         methods = self._selected_methods()
@@ -128,6 +401,8 @@ class MainWindow(QMainWindow):
         if not targets:
             self.statusBar().showMessage("Выберите хотя бы одну цель")
             return
+
+        methods = self._apply_fixation(methods, self._fixed_exponents())
 
         synth_cfg = dict(cfg.SYNTH)
         synth_cfg["noise"] = dict(cfg.SYNTH["noise"])
@@ -154,6 +429,8 @@ class MainWindow(QMainWindow):
         self._progress.setRange(0, 1)
         self._progress.setValue(1)
         self.statusBar().showMessage("Готово")
+        self._last_result = result
+        self._export_btn.setEnabled(True)
         self._show_results(result)
 
     def _on_failed(self, msg):
@@ -161,6 +438,12 @@ class MainWindow(QMainWindow):
         self._progress.setRange(0, 1)
         self._progress.setValue(0)
         self.statusBar().showMessage(f"Ошибка: {msg}")
+
+    def _on_export(self):
+        if self._last_result is None:
+            return
+        saved = reporting.export_results(self._last_result, cfg.RESULTS_DIR)
+        self.statusBar().showMessage(f"Сохранено в {cfg.RESULTS_DIR}: {len(saved)} файлов")
 
     def _show_results(self, result):
         self._results.clear()
@@ -170,14 +453,22 @@ class MainWindow(QMainWindow):
             layout = QVBoxLayout(tab)
             layout.addWidget(self._metrics_table(table))
             figs = QTabWidget()
-            figs.addTab(self._canvas(reporting.build_comparison_figure(result, tkey)), "Предсказание / RMSE")
+            figs.addTab(self._prediction_tab(result, tkey), "Предсказание / RMSE")
             fold = reporting.build_fold_rmse_figure(result, tkey)
             if fold is not None: figs.addTab(self._canvas(fold), "По профилям")
             layout.addWidget(figs, stretch=1)
             self._results.addTab(tab, target_label(tkey))
 
         if any(result.formulas.values()):
-            self._results.addTab(self._canvas(reporting.build_formulas_figure(result)), "Формулы")
+            fig = reporting.build_formulas_figure(result)
+            canvas = self._canvas(fig)
+            canvas.setMinimumSize(canvas.sizeHint())
+            scroll = QScrollArea()
+            scroll.setWidgetResizable(False)
+            scroll.setWidget(canvas)
+            self._results.addTab(scroll, "Формулы")
+
+        self._results.addTab(self._build_help_tab(), "Помощь")
 
     def _metrics_table(self, df):
         disp = df.round(3)
@@ -195,6 +486,44 @@ class MainWindow(QMainWindow):
 
     def _canvas(self, fig):
         return FigureCanvasQTAgg(fig)
+
+    def _prediction_tab(self, result, tkey):
+        container = QWidget()
+        v = QVBoxLayout(container)
+
+        metrics_df = result.metrics.get(tkey)
+        model_names = list(metrics_df.index) if metrics_df is not None else []
+        default_model = (metrics_df["RMSE"].idxmin()
+                         if metrics_df is not None and not metrics_df.empty else None)
+
+        combo = QComboBox()
+        for name in model_names:
+            combo.addItem(method_label(name), name)
+        if default_model in model_names:
+            combo.setCurrentIndex(model_names.index(default_model))
+
+        v.addWidget(combo)
+        canvas_holder = QVBoxLayout()
+        v.addLayout(canvas_holder)
+
+        state = {"canvas": None, "fig": None}
+
+        def rebuild(model_name):
+            if state["canvas"] is not None:
+                canvas_holder.removeWidget(state["canvas"])
+                state["canvas"].deleteLater()
+            if state["fig"] is not None:
+                plt.close(state["fig"])
+            fig = reporting.build_comparison_figure(result, tkey, scatter_model=model_name)
+            canvas = self._canvas(fig)
+            canvas_holder.addWidget(canvas)
+            state["canvas"] = canvas
+            state["fig"] = fig
+
+        combo.currentIndexChanged.connect(lambda i: rebuild(combo.itemData(i)))
+        rebuild(default_model)
+
+        return container
 
 
 def main():
